@@ -1,3 +1,4 @@
+#     --do_train \
 export CUDA_VISIBLE_DEVICES=3
 file=gpt2/run_clm.py
 nohup python $file \

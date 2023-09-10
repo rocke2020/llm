@@ -54,10 +54,13 @@ from transformers import (
 )
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
+from icecream import ic
+ic.configureOutput(includeContext=True, argToStringFunction=lambda _: str(_))
+ic.lineWrapWidth = 120
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-check_min_version("4.34.0.dev0")
+check_min_version("4.32.1")
 
 logger = get_logger(__name__)
 
@@ -419,6 +422,7 @@ def main():
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
+    # column_names: ['text'], text_column_name: text
     column_names = raw_datasets["train"].column_names
     text_column_name = "text" if "text" in column_names else column_names[0]
 
@@ -483,7 +487,33 @@ def main():
             load_from_cache_file=not args.overwrite_cache,
             desc=f"Grouping texts in chunks of {block_size}",
         )
+    """
+    raw_datasets is 'datasets.dataset_dict.DatasetDict', keys: ['test', 'train', 'validation']
+    DatasetDict({
+        test: Dataset({
+            text: ['', ' = Valkyria Chronicles III = \n', '', ' Senjō no Valkyria 3 : Unrecorded Chronicles ( Japanese : 戦場のヴァルキュリア3 , lit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria Chronicles III outside Japan , is a t', ...],
+            num_rows: *
+        })
 
+    tokenized_datasets
+    DatasetDict({
+        test: Dataset({
+            features: ['input_ids', 'attention_mask'],
+            num_rows: 4358
+        })
+        train: Dataset({
+            features: ['input_ids', 'attention_mask'],
+            num_rows: 36718
+        })
+        validation: Dataset({
+            features: ['input_ids', 'attention_mask'],
+            num_rows: 3760
+        })
+    })
+
+    lm_datasets keys: ['test', 'train', 'validation'],
+        sub-dataset keys: ['attention_mask', 'input_ids', 'labels']
+    """
     train_dataset = lm_datasets["train"]
     eval_dataset = lm_datasets["validation"]
 
