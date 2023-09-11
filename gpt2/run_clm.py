@@ -31,7 +31,7 @@ from itertools import chain
 from typing import Optional
 
 import datasets
-# import evaluate
+import evaluate
 import torch
 from datasets import load_dataset
 
@@ -66,6 +66,8 @@ logger = logging.getLogger(__name__)
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 logger.info('MODEL_TYPES: %s', MODEL_TYPES)
+local_eval_accuracy_file = '/home/qcdong/codes/evaluate/metrics/accuracy/accuracy.py'
+
 
 @dataclass
 class ModelArguments:
@@ -573,7 +575,7 @@ def main():
                 logits = logits[0]
             return logits.argmax(dim=-1)
 
-        # metric = evaluate.load("accuracy")
+        metric = evaluate.load(local_eval_accuracy_file)
 
         def compute_metrics(eval_preds):
             preds, labels = eval_preds
@@ -581,8 +583,8 @@ def main():
             # by preprocess_logits_for_metrics but we need to shift the labels
             labels = labels[:, 1:].reshape(-1)
             preds = preds[:, :-1].reshape(-1)
-            # return metric.compute(predictions=preds, references=labels)
-            return accuracy_score(y_pred=preds, y_true=labels)
+            return metric.compute(predictions=preds, references=labels)
+            # return accuracy_score(y_pred=preds, y_true=labels)
 
     # Initialize our Trainer
     trainer = Trainer(
