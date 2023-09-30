@@ -8,14 +8,20 @@ from scipy import stats
 
 
 def calc_metrics(y_true, y_score, threshold = 0.5):
-    if not isinstance(y_score, np.ndarray):
-        y_score = np.array(y_score)
-    y_score = y_score > threshold
-    accuracy = accuracy_score(y_true, y_score)
-    f1 = f1_score(y_true, y_score)
-    mcc = matthews_corrcoef(y_true, y_score)
-    precision = precision_score(y_true, y_score)
-    recall = recall_score(y_true, y_score)
+    """ NB: return order is accuracy, f1, mcc, precision, recall
+    -
+    if threshold > 0: y_score = y_score > threshold; else, directly uses y_score, that's treat y_score as integer """
+    if threshold > 0:
+        if not isinstance(y_score, np.ndarray):
+            y_score = np.array(y_score)
+        y_pred_id = y_score > threshold
+    else:
+        y_pred_id = y_score
+    accuracy = accuracy_score(y_true, y_pred_id)
+    f1 = f1_score(y_true, y_pred_id)
+    mcc = matthews_corrcoef(y_true, y_pred_id)
+    precision = precision_score(y_true, y_pred_id)
+    recall = recall_score(y_true, y_pred_id)
     return accuracy, f1, mcc, precision, recall
 
 
@@ -45,22 +51,19 @@ def roc(y_true, y_score):
 def calc_metrics_at_thresholds(y_true, y_pred_probability, thresholds=None, default_threshold=None):
     """  """
     if default_threshold:
-        accuracy, f1, mcc, precision, recall = calc_metrics(y_true, y_pred_probability, default_threshold)
-        logger.info(f'default_threshold {default_threshold}')
-        logger.info(f"accuracy: {accuracy}\nf1: {f1}\nmcc: {mcc}\nprecision: {precision}\nrecall: {recall}")
+        accuracy, f1, mcc, precision, recall = calc_metrics(
+            y_true, y_pred_probability, default_threshold)
+        logger.info(
+            f'default_threshold {default_threshold}\naccuracy: {accuracy}\n'
+            f"f1: {f1}\nmcc: {mcc}\nprecision: {precision}\nrecall: {recall}")
 
     if not thresholds: return
     for threshold in thresholds:
-        accuracy, f1, mcc, precision, recall = calc_metrics(y_true, y_pred_probability, threshold)
-        logger.info(f'threshold {threshold}')
-        logger.info(f"accuracy: {accuracy}\nf1: {f1}\nmcc: {mcc}\nprecision: {precision}\nrecall: {recall}")
-
-        if default_threshold:
-            # Extra test on the threshold value
-            mid_threshold =  (threshold + default_threshold) / 2
-            accuracy, f1, mcc, precision, recall = calc_metrics(y_true, y_pred_probability, mid_threshold)
-            logger.info(f'mid_threshold {mid_threshold} which is the mean of threshold and default threshold')
-            logger.info(f"accuracy: {accuracy}\nf1: {f1}\nmcc: {mcc}\nprecision: {precision}\nrecall: {recall}")
+        accuracy, f1, mcc, precision, recall = calc_metrics(
+            y_true, y_pred_probability, threshold)
+        logger.info(
+            f"\nthreshold {threshold}\naccuracy: {accuracy}\nf1: {f1}\nmcc: {mcc}\n"
+            f"precision: {precision}\nrecall: {recall}")
 
 
 def jensen_shannon_distance(p, q):

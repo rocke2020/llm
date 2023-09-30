@@ -1,5 +1,5 @@
 #     --do_train \
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=0
 file=gpt2/run_clm.py
 nohup python $file \
     --model_name_or_path /mnt/nas1/huggingface/gpt2 \
