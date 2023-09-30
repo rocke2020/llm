@@ -36,6 +36,7 @@ def first_load():
 
 def load_wikitext_2_raw_v1():
     """  """
+    logger.info('load_wikitext_2_raw_v1')
     raw_datasets = load_dataset(
         'wikitext',
         'wikitext-2-raw-v1',
