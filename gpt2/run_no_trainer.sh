@@ -1,7 +1,7 @@
 export CUDA_VISIBLE_DEVICES=3
 file=gpt2/run_clm_no_trainer.py
 nohup python $file \
-    --model_name_or_path /mnt/nas1/huggingface/gpt2 \
+    --model_name_or_path /mnt/nas1/models/gpt2 \
     --dataset_name wikitext \
     --dataset_config_name wikitext-2-raw-v1 \
     --output_dir tmp/test-clm2 \

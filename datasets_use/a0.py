@@ -17,7 +17,7 @@ wikitext_103_dir = wikitext_dir + '/wikitext-103-v1'
 wikitext_103_train_dir = wikitext_103_dir + '/train'
 
 
-def first_load():
+def load_wikipedia():
     """  """
     train_files = [f'{wikipedia_dir}/train-00{i:02d}-of-0083.parquet' for i in range(1, 4)]
     ic(train_files[0])
@@ -28,24 +28,43 @@ def first_load():
         "cache_dir": cache_dir,
     }
     wiki = load_dataset('parquet', data_files=data_files, **dataset_args)
-
+    logger.info(wiki)
     for item in wiki:
         print(item)
         break
 
 
-def load_wikitext_2_raw_v1():
+def load_wikitext_2_raw_v1(offline=True, verbose=True):
     """  """
+    wikitext_2_raw_v1_dir = '/mnt/nas1/huggingface/wikitext/wikitext-2-raw-v1'
     logger.info('load_wikitext_2_raw_v1')
-    raw_datasets = load_dataset(
-        'wikitext',
-        'wikitext-2-raw-v1',
-        cache_dir=cache_dir,
-    )
-    logger.info(raw_datasets.keys())
-    for item in raw_datasets:
-        print(item)
-        break
+    if offline:
+        data_files = {
+            'train': wikitext_2_raw_v1_dir + '/train/' + '0000.parquet',
+            'test': wikitext_2_raw_v1_dir + '/test/' + '0000.parquet',
+            'validation': wikitext_2_raw_v1_dir + '/validation/' + '0000.parquet',
+        }
+        raw_datasets = load_dataset(
+            'parquet',
+            data_files=data_files,
+            cache_dir=cache_dir,
+        )
+    else:
+        raw_datasets = load_dataset(
+            'wikitext',
+            'wikitext-2-raw-v1',
+            cache_dir=cache_dir,
+        )
+    logger.info(raw_datasets)
+    if verbose:
+        train_dataset = raw_datasets['train']
+        count = 0
+        for item in train_dataset:
+            logger.info(item)
+            count += 1
+            if count > 10:
+                break
+    return raw_datasets
 
 
 def load_wikitext_103():
@@ -106,7 +125,7 @@ def load_wikitext_103():
 
 
 if __name__ == "__main__":
-    # first_load()
+    # load_wikipedia()
     load_wikitext_2_raw_v1()
     # load_wikitext_103()
     logger.info('end')
