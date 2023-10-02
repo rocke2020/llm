@@ -109,3 +109,8 @@ def log_df_train_test_basic_info(df, df_train, df_test, seq_column=SEQUENCE):
     logger.info(f'df_train.columns {df_train.columns.tolist()}')
     logger.info(f'df_train seq.head()\n{df_train[seq_column].head()}')
     logger.info(f'df_test seq.head()\n{df_test[seq_column].head()}')
+
+
+def is_bf16_supported():
+    """  """
+    return torch.cuda.is_bf16_supported()

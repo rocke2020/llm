@@ -28,7 +28,7 @@ import warnings
 from dataclasses import dataclass, field
 from itertools import chain
 from typing import Optional
-
+from transformers import AutoTokenizer, EncoderDecoderModel, EarlyStoppingCallback
 import datasets
 import evaluate
 import torch
@@ -574,8 +574,8 @@ def main():
                 logits = logits[0]
             return logits.argmax(dim=-1)
 
-        # metric = evaluate.load(local_eval_accuracy_file)
-        metric = evaluate.load("accuracy")
+        metric = evaluate.load(local_eval_accuracy_file)
+        # metric = evaluate.load("accuracy")
 
         def compute_metrics(eval_preds):
             preds, labels = eval_preds
@@ -584,7 +584,8 @@ def main():
             labels = labels[:, 1:].reshape(-1)
             preds = preds[:, :-1].reshape(-1)
             return metric.compute(predictions=preds, references=labels)
-
+        
+    early_stop = EarlyStoppingCallback(2, 1.0)
     # Initialize our Trainer
     trainer = Trainer(
         model=model,
@@ -596,6 +597,7 @@ def main():
         data_collator=default_data_collator,
         compute_metrics=compute_metrics if training_args.do_eval and not is_torch_tpu_available() else None,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics if training_args.do_eval and not is_torch_tpu_available() else None,
+        callbacks=[early_stop],
     )
 
     # Training
