@@ -67,7 +67,7 @@ def load_wikitext_2_raw_v1(offline=True, verbose=True):
     return raw_datasets
 
 
-def load_wikitext_103():
+def load_wikitext_103(verbose=False):
     """
     raw
     23-09-30 15:15:48 a0.py 72: {'text': ''}
@@ -99,10 +99,6 @@ def load_wikitext_103():
         'test': wikitext_103_raw_dir + '/test/' + '0000.parquet',
         'validation': wikitext_103_raw_dir + '/validation/' + '0000.parquet',
     }
-    dataset_args = {
-        # "keep_linebreaks": False,  # only for text input format
-        "split": 'train',
-    }
     mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
     raw_datasets = load_dataset(
         'parquet',
@@ -110,22 +106,24 @@ def load_wikitext_103():
         cache_dir=cache_dir,
         # **dataset_args
     )
-    logger.info(raw_datasets.keys())
-    train_dataset = raw_datasets['train']
-    count = 0
-    for item in train_dataset:
-        logger.info(item)
-        count += 1
-        if count > 10:
-            break
-    
-    mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-    # 130 MB about 0.5 of saved parquet file size.
-    logger.info(f"RAM memory used: {(mem_after - mem_before)} MB")  
+    logger.info(raw_datasets)
+    if verbose:
+        train_dataset = raw_datasets['train']
+        count = 0
+        for item in train_dataset:
+            logger.info(item)
+            count += 1
+            if count > 10:
+                break
+        
+        mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+        # 130 MB about 0.5 of saved parquet file size.
+        logger.info(f"RAM memory used: {(mem_after - mem_before)} MB")  
+    return raw_datasets
 
 
 if __name__ == "__main__":
     # load_wikipedia()
-    load_wikitext_2_raw_v1()
-    # load_wikitext_103()
+    # load_wikitext_2_raw_v1()
+    load_wikitext_103()
     logger.info('end')
