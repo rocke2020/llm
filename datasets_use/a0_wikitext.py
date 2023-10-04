@@ -34,7 +34,7 @@ def load_wikipedia():
         break
 
 
-def load_wikitext_2_raw_v1(offline=True, verbose=True):
+def load_wikitext_2_raw_v1(offline=True, verbose=False):
     """  """
     wikitext_2_raw_v1_dir = '/mnt/nas1/huggingface/wikitext/wikitext-2-raw-v1'
     logger.info('load_wikitext_2_raw_v1')
@@ -124,6 +124,6 @@ def load_wikitext_103(verbose=False):
 
 if __name__ == "__main__":
     # load_wikipedia()
-    # load_wikitext_2_raw_v1()
-    load_wikitext_103()
+    load_wikitext_2_raw_v1(offline=1)
+    # load_wikitext_103()
     logger.info('end')

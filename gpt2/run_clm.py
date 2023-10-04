@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
-logger.info('MODEL_TYPES: %s', MODEL_TYPES)
+logger.warning('MODEL_TYPES: %s', MODEL_TYPES)
 local_eval_accuracy_file = '/home/qcdong/codes/evaluate/metrics/accuracy/accuracy.py'
 
 
@@ -319,11 +319,12 @@ def main():
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
     if data_args.dataset_name is not None:
+        sys.path.append(os.path.abspath('.'))
+        from datasets_use.a0_wikitext import load_wikitext_103, load_wikitext_2_raw_v1
         if data_args.dataset_config_name == 'wikitext-103-raw-v1':
-            sys.path.append(os.path.abspath('.'))
-            from datasets_use.a0_wikitext import load_wikitext_103
-
             raw_datasets = load_wikitext_103()
+        elif data_args.dataset_config_name == 'wikitext-2-raw-v1':
+            raw_datasets = load_wikitext_2_raw_v1()
         else:
             # Downloading and loading a dataset from the hub.
             raw_datasets = load_dataset(
@@ -417,7 +418,15 @@ def main():
             logger.info(f"Overriding config: {model_args.config_overrides}")
             config.update_from_string(model_args.config_overrides)
             logger.info(f"New config: {config}")
-
+        # True
+        logger.info('getattr(self.config, "tie_word_embeddings"): %s',
+                    getattr(config, "tie_word_embeddings"))
+        # False
+        logger.info('getattr(self.config, "is_encoder_decoder"): %s',
+                    getattr(config, "is_encoder_decoder"))
+        # False
+        logger.info('getattr(self.config, "tie_encoder_decoder"): %s',
+                    getattr(config, "tie_encoder_decoder"))
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
         "use_fast": model_args.use_fast_tokenizer,
