@@ -1,3 +1,3 @@
-# tiny-gpt
+# LLM
 
 self learning and exercise
