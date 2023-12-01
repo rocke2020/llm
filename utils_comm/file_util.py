@@ -1,24 +1,25 @@
-import json
 import dataclasses
-from decimal import Decimal
-import dataclasses, json
-from typing import Tuple, List
-import numpy
-import math
 import hashlib
+import json
+import math
 import socket
-from utils.log_util import logger
+from decimal import Decimal
+from typing import List, Tuple
+
+import numpy
 import yaml
+from utils_comm.log_util import logger
 
 
-class FileUtil(object):
+class FileUtil:
     """
     文件工具类
     """
+
     @classmethod
-    def read_raw_text(cls, file_path) ->List[str]:
+    def read_lines_from_txt(cls, file_path) -> List[str]:
         """
-        读取原始文本数据，每行均为纯文本
+        读取原始文本数据，每行均为纯文本，自动删除头尾空格 strip()
         """
         all_raw_text_list = []
         with open(file_path, "r", encoding="utf-8") as raw_text_file:
@@ -29,36 +30,55 @@ class FileUtil(object):
         return all_raw_text_list
 
     @classmethod
-    def write_raw_text(cls, texts: list[str] | str, file_path):
+    def write_lines_to_txt(cls, texts, file_path):
         """
-        写入文本数据，每行均为纯文本
+        写入文本数据，每行均为纯文本, 自动增加换行
         """
         with open(file_path, "w", encoding="utf-8") as f:
-            if isinstance(texts, str):
-                f.write(texts + '\n')
-                return
             for item in texts:
-                f.write(f'{item}\n')
+                f.write(f"{item}\n")
 
     @classmethod
-    def load_json(cls, file_path):
+    def read_json(cls, file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data
 
     @classmethod
-    def dump_json(cls, data, file_path, ensure_ascii=False):
+    def read_jsonl(cls, file_path):
+        data = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                data.append(json.loads(line))
+        logger.info(f"Read jsonl file {file_path} with {len(data)} lines")
+        return data
+
+    @classmethod
+    def write_json(cls, data, file_path, ensure_ascii=False):
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=ensure_ascii, indent=4, cls=JSONEncoder)
 
+    @classmethod
+    def write_jsonl(cls, data, file_path, ensure_ascii=False):
+        with open(file_path, "w", encoding="utf-8") as f:
+            for line in data:
+                f.write(
+                    json.dumps(
+                        line, ensure_ascii=ensure_ascii, indent=4, cls=JSONEncoder
+                    )
+                    + "\n"
+                )
 
     @classmethod
     def read_yml(cls, file_path):
-        """  """
-        with open(file_path, 'r', encoding='utf-8') as file:
+        """ """
+        with open(file_path, "r", encoding="utf-8") as file:
             config = yaml.safe_load(file)
         config = Bunch(**config)
         return config
+
+
+file_util = FileUtil()
 
 
 def dataclass_from_dict(klass, dikt):
@@ -87,18 +107,45 @@ class JSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
+def get_partial_files(input_files, total_parts_num=-1, part_num=-1, start_index=-1):
+    """part_seq starts from 1.
+
+    If start_index > 0, directly get partial input_files[start_index:]\n
+    elseIf part_num > 0 and total_parts_num > 1, split input files\n
+    else, keep orig input files
+    """
+    logger.info(f"Total input files num {len(input_files)}")
+    if start_index > 0:
+        logger.info("Get parts from index %s", start_index)
+        partial_files = input_files[start_index:]
+        logger.info(f"Current partial_files num {len(partial_files)}")
+    elif total_parts_num > 1 and part_num > 0:
+        logger.info(
+            "Total_parts num %s, current part_num %s", total_parts_num, part_num
+        )
+        input_files_num = len(input_files)
+        num_per_part = math.ceil(input_files_num / total_parts_num)
+        start_i = (part_num - 1) * num_per_part
+        end_i = part_num * num_per_part
+        partial_files = input_files[start_i:end_i]
+        logger.info(f"Current partial_files num {len(partial_files)}")
+    else:
+        partial_files = input_files
+    return partial_files
+
+
 def calculate_file_md5(filename):
-    """ For small file """
-    with open(filename,"rb") as f:
+    """For small file"""
+    with open(filename, "rb") as f:
         bytes = f.read()
         readable_hash = hashlib.md5(bytes).hexdigest()
         return readable_hash
 
 
 def calculate_file_md5_large_file(filename):
-    """ For large file to read by chunks in iteration. """
+    """For large file to read by chunks in iteration."""
     md5_hash = hashlib.md5()
-    with open(filename,"rb") as f:
+    with open(filename, "rb") as f:
         # Read and update hash in chunks of 4K
         for byte_block in iter(lambda: f.read(4096), b""):
             md5_hash.update(byte_block)
@@ -106,49 +153,27 @@ def calculate_file_md5_large_file(filename):
 
 
 def calc_seq_hash(seq: str):
-    """  """
-    seq_sha3_name = hashlib.sha3_256(seq.encode('utf-8')).hexdigest()
+    """ """
+    seq_sha3_name = hashlib.sha3_256(seq.encode("utf-8")).hexdigest()
     return seq_sha3_name
-
-
-def get_partial_files(input_files, total_parts_num=-1, part_num=-1, start_index=-1) ->List:
-    """ part_seq starts from 1.
-
-        If start_index > 0, directly get partial input_files[start_index:]\n
-        elseIf part_num > 0 and total_parts_num > 1, split input files\n
-        else, keep orig input files
-    """
-    if start_index > 0:
-        logger.info('Get parts from index %s', start_index)
-        partial_files = input_files[start_index:]
-        logger.info(f'Current partial_files num {len(partial_files)}')
-    elif part_num > 0 and total_parts_num > 1:
-        logger.info('Total_parts num %s, current part_num %s', total_parts_num, part_num)
-        input_files_num = len(input_files)
-        num_per_part = math.ceil(input_files_num / total_parts_num)
-        start_i = (part_num - 1) * num_per_part
-        end_i = part_num * num_per_part
-        partial_files = input_files[start_i: end_i]
-        logger.info(f'Current partial_files num {len(partial_files)}')
-    else:
-        partial_files = input_files
-    return partial_files
 
 
 def get_local_ip(only_last_address=True) -> str:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # doesn't even have to be reachable
-        s.connect(('192.255.255.255', 1))
+        s.connect(("192.255.255.255", 1))
         local_ip = s.getsockname()[0]
     except Exception as identifier:
-        logger.info('cannot get ip with error %s\nSo the local ip is 127.0.0.1', identifier)
-        local_ip = '127.0.0.1'
+        logger.info(
+            "cannot get ip with error %s\nSo the local ip is 127.0.0.1", identifier
+        )
+        local_ip = "127.0.0.1"
     finally:
         s.close()
-    logger.info('full local_ip %s, only_last_address %s', local_ip, only_last_address)
+    logger.info("full local_ip %s, only_last_address %s", local_ip, only_last_address)
     if only_last_address:
-        local_ip = local_ip.split('.')[-1]
+        local_ip = local_ip.split(".")[-1]
     return local_ip
 
 
