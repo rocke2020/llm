@@ -11,7 +11,7 @@ ic.lineWrapWidth = 120
 sys.path.append(os.path.abspath("."))
 from collections import defaultdict
 from utils_comm.log_util import logger
-from utils_comm.file_util import FileUtil
+from utils_comm.file_util import file_util
 from tqdm import tqdm
 
 
@@ -49,24 +49,39 @@ def check_file(file=test_file, debug=False):
         tmp_dir.mkdir(parents=True, exist_ok=True)
         demo_texts = items[:2] + items[-2:]
         text0_file = tmp_dir / f"wikipedia_{orig_file.stem}.txt"
-        FileUtil.write_lines_to_txt(demo_texts, text0_file)
+        file_util.write_lines_to_txt(demo_texts, text0_file)
     return items
 
 
-def convert_to_jsonl():
+def convert_to_jsonl(debug=False):
+    """ sentences: 6660731 """
     sentences = []
+    out_file=en_wikipedia_jsonl_file
+    if debug:
+        out_file = Path("datasets_use/tmp_data") / "wikipedia.jsonl"
     for file in tqdm(Path(wikipedia_dir).glob("*.parquet")):
         df = pd.read_parquet(file)
         for item in df["text"]:
-            text = blanks_pat.sub(" ", item).strip()
-            if len(text) > 10 and len(text.split()) > 1:
-                sentences.append({"text": text})
+            sub_sentences = []
+            _sentences = item.split("\n")
+            for sent in _sentences:
+                text = blanks_pat.sub(" ", sent).strip()
+                if len(text) > 5 and len(text.split()) > 1:
+                    sub_sentences.append(text)
+            sentences.append({"text": "\n".join(sub_sentences)})
+        if debug:
+            break
     logger.info(f"sentences: {len(sentences)}, starts to write")
-    with open(en_wikipedia_jsonl_file, "w", encoding="utf-8") as f:
+
+    with open(out_file, "w", encoding="utf-8") as f:
         for line in sentences:
-            f.write(json.dumps(line, ensure_ascii=False, indent=4) + "\n")
+            f.write(json.dumps(line, ensure_ascii=False) + "\n")
+            if debug:
+                break
+
+
     logger.info('end')
 
 if __name__ == "__main__":
     # check_file(debug=1)  # type: ignore
-    convert_to_jsonl()
+    convert_to_jsonl(debug=False)

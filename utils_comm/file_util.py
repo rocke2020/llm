@@ -73,12 +73,7 @@ class FileUtil(object):
     def write_jsonl(cls, data, file_path, ensure_ascii=False):
         with open(file_path, "w", encoding="utf-8") as f:
             for line in data:
-                f.write(
-                    json.dumps(
-                        line, ensure_ascii=ensure_ascii, indent=4, cls=JSONEncoder
-                    )
-                    + "\n"
-                )
+                f.write(json.dumps(line, ensure_ascii=ensure_ascii) + "\n")
 
     @classmethod
     def read_yml(cls, file_path):
@@ -180,7 +175,7 @@ def get_partial_files(input_files, total_parts_num=-1, part_num=-1, start_index=
     return partial_files
 
 
-def get_sorted_partial_files(
+def sort_partial_files(
     input_dir, file_suffix, total_parts=2, part_num=1, reverse=False
 ):
     """
