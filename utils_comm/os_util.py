@@ -1,15 +1,7 @@
 import logging
-import os
-import random
-import re
-import resource
-import sys
 import time
-from collections import defaultdict
-from pathlib import Path
 
 import psutil
-from tqdm import tqdm
 
 logger = logging.getLogger()
 logging.basicConfig(
@@ -32,8 +24,8 @@ def kill_process_with_all_sub(pid):
 
 def kill_multi_prcoesss(ids: list[int]):
     """  """
-    for id in ids:
-        kill_process_with_all_sub(id)
+    for pid in ids:
+        kill_process_with_all_sub(pid)
 
 
 def check_process_status(pid):
@@ -44,6 +36,7 @@ def check_process_status(pid):
     logger.info(psutil.Process(pid))
 
 
+## limit memory usage of current process
 # p = psutil.Process()
 # print(p.pid)
 # def limit_memory(maxsize):
@@ -55,9 +48,8 @@ def check_process_status(pid):
 
 if __name__ == "__main__":
     ids = [
-        # 4188653,
-        620975,
+        3801547, 
+        # 672068,
     ]
     kill_multi_prcoesss(ids)
     # check_process_status(786967)
-    

@@ -4,7 +4,7 @@ ic.configureOutput(includeContext=True, argToStringFunction=lambda _: str(_))
 ic.lineWrapWidth = 120
 import os, sys
 sys.path.append(os.path.abspath('.'))
-from utils.log_util import logger
+from utils_comm.log_util import logger
 import psutil
 
 

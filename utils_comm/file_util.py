@@ -1,17 +1,28 @@
+""" Basic usage example: 
+
+from utils_comm.file_uilt import file_util
+
+file_util.write_json({"a": 1}, "test.json")
+"""
+
 import dataclasses
 import hashlib
 import json
 import math
 import socket
 from decimal import Decimal
+from pathlib import Path
 from typing import List, Tuple
 
 import numpy
+import pandas as pd
 import yaml
+from pandas import DataFrame
+
 from utils_comm.log_util import logger
 
 
-class FileUtil:
+class FileUtil(object):
     """
     文件工具类
     """
@@ -81,6 +92,41 @@ class FileUtil:
 file_util = FileUtil()
 
 
+def read_seqs_from_file(seqs_file, seq_column_name="Sequence", note=""):
+    """input_file must be txt or csv, or xlsx"""
+    seqs_file = Path(seqs_file)
+    assert seqs_file.exists(), f"{note} input_file not exists: {seqs_file}"
+    if seqs_file.suffix == ".txt":
+        seqs = FileUtil.read_lines_from_txt(seqs_file)
+    elif seqs_file.suffix == ".csv":
+        df = pd.read_csv(seqs_file)
+        assert seq_column_name, "seq_column_name is none or empty"
+        seqs = get_seqs_from_df(df, seq_column_name)
+    elif seqs_file.suffix == ".xlsx":
+        df = pd.read_excel(seqs_file, sheet_name=0)
+        assert seq_column_name, "seq_column_name is none or empty"
+        seqs = get_seqs_from_df(df, seq_column_name)
+    else:
+        raise ValueError(
+            f"{note} input_file must be txt or csv, or xlsx, but got {seqs_file.suffix}"
+        )
+    _seqs = []
+    for seq in seqs:
+        if seq:
+            _seqs.append(seq)
+    assert _seqs, f"{note} seqs is empty in {seqs_file}"
+    logger.info("%s seqs num %s", note, len(_seqs))
+    return _seqs
+
+
+def get_seqs_from_df(df: DataFrame, seq_column_name="Sequence"):
+    """ """
+    df.dropna(subset=[seq_column_name], inplace=True)
+    df.drop_duplicates(subset=[seq_column_name], inplace=True)
+    seqs = df[seq_column_name].tolist()
+    return seqs
+
+
 def dataclass_from_dict(klass, dikt):
     try:
         fieldtypes = klass.__annotations__
@@ -134,6 +180,36 @@ def get_partial_files(input_files, total_parts_num=-1, part_num=-1, start_index=
     return partial_files
 
 
+def get_sorted_partial_files(
+    input_dir, file_suffix, total_parts=2, part_num=1, reverse=False
+):
+    """
+    Args:
+        input_dir: input dir
+        file_suffix: file suffix, eg: .fasta
+        total_parts: total parts num of input files
+        part_num: part num, starts from 1
+        reverse: reverse files order
+    """
+    assert file_suffix.startswith(
+        "."
+    ), f"file_suffix must starts with ., but got {file_suffix}"
+    input_files = []
+    fasta_files = sorted(Path(input_dir).glob(f"*{file_suffix}"))
+    for file in fasta_files:
+        input_files.append(str(file))
+    if not input_files:
+        raise ValueError(f"No input files found in directory: {input_dir}")
+    partial_files = get_partial_files(input_files, total_parts, part_num)
+    if len(partial_files) == 0:
+        raise RuntimeError(
+            f"No partial input files found for total_parts={total_parts}, part_num={part_num}"
+        )
+    if reverse:
+        partial_files.reverse()
+    return partial_files
+
+
 def calculate_file_md5(filename):
     """For small file"""
     with open(filename, "rb") as f:
@@ -164,10 +240,8 @@ def get_local_ip(only_last_address=True) -> str:
         # doesn't even have to be reachable
         s.connect(("192.255.255.255", 1))
         local_ip = s.getsockname()[0]
-    except Exception as identifier:
-        logger.info(
-            "cannot get ip with error %s\nSo the local ip is 127.0.0.1", identifier
-        )
+    except OSError as e:
+        logger.info("cannot get ip with error %s\nSo the local ip is 127.0.0.1", e)
         local_ip = "127.0.0.1"
     finally:
         s.close()
@@ -179,6 +253,9 @@ def get_local_ip(only_last_address=True) -> str:
 
 class Bunch(dict):
     """Container object exposing keys as attributes.
+
+    Benefits 1: Use this class to let dir() to return the dict items.
+    Benefits 2: directly use a.aa, not needing a['aa'], easierly for config access.
 
     Bunch objects are sometimes used as an output for functions and methods.
     They extend dictionaries by enabling values to be accessed by key,
@@ -225,3 +302,11 @@ class Bunch(dict):
     #     # Overriding __setstate__ to be a noop has the effect of
     #     # ignoring the pickled __dict__
     #     pass
+
+
+def get_sorted_index(lst, reverse=False):
+    """ """
+    sorted_index = [
+        i for i, x in sorted(enumerate(lst), key=lambda x: x[1], reverse=reverse)
+    ]
+    return sorted_index

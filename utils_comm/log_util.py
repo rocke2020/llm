@@ -1,81 +1,83 @@
+""" Basic usage example: 
+
+from utils_comm.log_util import logger
+
+logger.info('comments')
+arr = [[1, 2], [3, 4]]
+logger.info(f'len(arr) {len(arr)}')
+logger.info('len(arr) %s', len(arr))
+"""
+
 import contextlib
-import functools
 import logging
 import os
 import time
 
 from icecream import ic
+from pandas import DataFrame
 
 ic.configureOutput(includeContext=True, argToStringFunction=str)
 ic.lineWrapWidth = 120
 
 
-fmt = "%(asctime)s %(filename)s %(lineno)d: %(message)s"
-datefmt = "%y-%m-%d %H:%M:%S"
+FMT = '%(asctime)s %(filename)s %(lineno)d: %(message)s'
+DATE_FORMAT = '%y-%m-%d %H:%M:%S'
 
 
-def get_logger(name=None, log_file=None, log_level=logging.INFO):
-    """concise log"""
-    logger = logging.getLogger(name)
-    logging.basicConfig(format=fmt, datefmt=datefmt)
+def get_logger(name=None, log_file=None, log_level=logging.DEBUG):
+    """ default log level DEBUG, if log_file is not None but a str, save log into log_file """
+    _logger = logging.getLogger(name)
+    logging.basicConfig(format=FMT, datefmt=DATE_FORMAT)
     if log_file is not None:
         log_file_folder = os.path.split(log_file)[0]
         if log_file_folder:
             os.makedirs(log_file_folder, exist_ok=True)
-        fh = logging.FileHandler(log_file, "w", encoding="utf-8")
-        fh.setFormatter(logging.Formatter(fmt, datefmt))
-        logger.addHandler(fh)
-    logger.setLevel(log_level)
-    return logger
+        fh = logging.FileHandler(log_file, 'w', encoding='utf-8')
+        fh.setFormatter(logging.Formatter(FMT, DATE_FORMAT))
+        _logger.addHandler(fh)
+    _logger.setLevel(log_level)
+    return _logger
 
 
 logger = get_logger()
 
 
-def log_df_basic_info(df, comments=""):
+def log_df_basic_info(df: DataFrame, log_func=None, comments='', full_info=False,
+                      partial_col_num=4):
+    """ For large df, describe() use much more time! """
+    if log_func is None:
+        log_func = logger
     if comments:
-        logger.info(f"comments {comments}")
-    logger.info(f"df.shape {df.shape}")
-    logger.info(f"df.columns {df.columns.to_list()}")
-    logger.info(f"df.head()\n{df.head()}")
-    logger.info(f"df.tail()\n{df.tail()}")
-
-
-def func_time_print(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kw):
-        t0 = time.time()
-        res = func(*args, **kw)
-        _total_seconds = time.time() - t0
-        total_seconds = int(_total_seconds)
-        hours = total_seconds // 3600
-        total_seconds = total_seconds % 3600
-        minutes = total_seconds // 60
-        seconds = total_seconds % 60
-        print(f"call {func.__name__}() uses hours:mm:ss {hours}:{minutes}:{seconds}")
-        print(f"call {func.__name__}() uses total seconds {_total_seconds:.3f}")
-        return res
-
-    return wrapper
+        log_func.info(f'comments {comments}')
+    log_func.info(f'df.shape {df.shape}')
+    columns = df.columns.to_list()
+    if full_info:
+        log_func.info(f'df.columns {columns}')
+        log_func.info(f'df.head()\n{df.head()}')
+        log_func.info(f'df.tail()\n{df.tail()}')
+        log_func.info(f'df.describe()\n{df.describe()}')
+    else:
+        log_func.info(f'df.columns [:{partial_col_num}] {columns[:partial_col_num]}')
+        log_func.info(f'df.columns [-partial_col_num:] {columns[-partial_col_num:]}')
+        log_func.info(f'df[columns[:partial_col_num]].head() {df[columns[:partial_col_num]].head()}')
+        log_func.info(f'df[columns[-partial_col_num:]].tail() {df[columns[-partial_col_num:]].tail()}')
+        if len(df) <= 200_000:
+            log_func.info(f'df[columns[:partial_col_num]].describe()\n{df[columns[:partial_col_num]].describe()}')
 
 
 @contextlib.contextmanager
 def timing(msg: str):
-    logging.info("Started %s", msg)
+    logging.info('Started %s', msg)
     tic = time.time()
     yield
     toc = time.time()
-    total_seconds = toc - tic
-    hours = total_seconds / 3600
-    logging.info(
-        "Finished %s in %.3f seconds, i.e. %.3f hours", msg, total_seconds, hours
-    )
+    logging.info('Finished %s in %.3f seconds', msg, toc - tic)
 
 
 if __name__ == "__main__":
-    with timing("test"):
-        a = 1
-        for i in range(1000):
-            a = 1
+    @timing('start')
+    def a():
+        """  """
+        print(1)
 
-    pass
+    a()
