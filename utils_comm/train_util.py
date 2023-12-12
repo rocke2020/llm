@@ -76,6 +76,19 @@ def models_are_equal(model1, model2):
             logger.info("true")
 
 
+def run_compile_when_pt2(model, enable_complile=True, save_gpu_memory=True):
+    """  """
+    pt_version = torch.__version__.split('.')[0]
+    if pt_version == '2' and enable_complile:
+        if save_gpu_memory:
+            _model = torch.compile(model)
+        else:
+            _model = torch.compile(model, mode='reduce-overhead')
+    else:
+        _model = model
+    return _model
+
+
 def get_weights_from_df(df, category_label_column, prefix='test'):
     num0 = len(df[df[category_label_column] == 0])
     num1 = len(df[df[category_label_column] == 1])

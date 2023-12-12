@@ -5,12 +5,13 @@ from pandas import DataFrame
 import os, sys, shutil, logging, json
 import re, random, math
 from icecream import ic
-ic.configureOutput(includeContext=True, argToStringFunction=lambda _: str(_))
+
+ic.configureOutput(includeContext=True, argToStringFunction=str)
 ic.lineWrapWidth = 120
-sys.path.append(os.path.abspath('.'))
+sys.path.append(os.path.abspath("."))
 from collections import defaultdict
-from utils.log_util import logger
-from utils.file_util import FileUtil
+from utils_comm.log_util import logger
+from utils_comm.file_util import file_util
 from tqdm import tqdm
 
 
@@ -18,32 +19,69 @@ SEED = 0
 random.seed(SEED)
 np.random.seed(SEED)
 
-wikipedia_dir = '/mnt/nas1/huggingface/wikipedia/20230601/en'
-file = '/mnt/nas1/huggingface/wikipedia/20230601/en/train-0001-of-0083.parquet'
-blanks_pat = re.compile(r'\s{2,}')
+wikipedia_dir = "/mnt/nas1/dong-qichang/corpus/wiki/wikipedia/20230601/en/"
+test_file = wikipedia_dir + "train-0001-of-0083.parquet"
+blanks_pat = re.compile(r"\s{2,}")
+en_wikipedia_jsonl_file = Path(wikipedia_dir).parent / "en_wikipedia.jsonl"
 
 
-def read_file(file=file, debug=False):
-    """  """
+def check_file(file=test_file, debug=False):
+    """
+    df.shape: (80253, 4)
+    df.columns: Index(['id', 'url', 'title', 'text']
+    df['title'][0]: Anarchism
+    """
     df = pd.read_parquet(file)
     if debug:
         ic(df.shape)
         ic(df.columns)
-        ic(df['text'][0], type(df['text'][0]))
-        ic(df['title'][0], type(df['title'][0]))
+        ic(type(df["text"][0]), type(df["title"][0]))
+        ic(df["text"][0])
+        ic(df["title"][0])
     items = []
-    for item in df['text']:
-        text = blanks_pat.sub(' ', item).strip()
-        if text != '':
+    for item in df["text"]:
+        text = blanks_pat.sub(" ", item).strip()
+        if text != "":
             items.append(text)
     if debug:
         orig_file = Path(file)
-        tmp_dir = Path('datasets_use/tmp_data')
+        tmp_dir = Path("datasets_use/tmp_data")
         tmp_dir.mkdir(parents=True, exist_ok=True)
-        text0_file = tmp_dir / f'{orig_file.stem}.log'
-        FileUtil.write_raw_text(items[:2], text0_file)
+        demo_texts = items[:2] + items[-2:]
+        text0_file = tmp_dir / f"wikipedia_{orig_file.stem}.txt"
+        file_util.write_lines_to_txt(demo_texts, text0_file)
     return items
 
 
+def convert_to_jsonl(debug=False):
+    """ sentences: 6660731 """
+    sentences = []
+    out_file=en_wikipedia_jsonl_file
+    if debug:
+        out_file = Path("datasets_use/tmp_data") / "wikipedia.jsonl"
+    for file in tqdm(Path(wikipedia_dir).glob("*.parquet")):
+        df = pd.read_parquet(file)
+        for item in df["text"]:
+            sub_sentences = []
+            _sentences = item.split("\n")
+            for sent in _sentences:
+                text = blanks_pat.sub(" ", sent).strip()
+                if len(text) > 5 and len(text.split()) > 1:
+                    sub_sentences.append(text)
+            sentences.append({"text": "\n".join(sub_sentences)})
+        if debug:
+            break
+    logger.info(f"sentences: {len(sentences)}, starts to write")
+
+    with open(out_file, "w", encoding="utf-8") as f:
+        for line in sentences:
+            f.write(json.dumps(line, ensure_ascii=False) + "\n")
+            if debug:
+                break
+
+
+    logger.info('end')
+
 if __name__ == "__main__":
-    read_file(debug=1)
+    # check_file(debug=1)  # type: ignore
+    convert_to_jsonl(debug=False)
