@@ -54,21 +54,27 @@ def check_file(file=test_file, debug=False):
 
 
 def convert_to_jsonl(debug=False):
-    """ sentences: 6660731 """
+    """sentences: 6660595"""
     sentences = []
-    out_file=en_wikipedia_jsonl_file
+    out_file = en_wikipedia_jsonl_file
     if debug:
         out_file = Path("datasets_use/tmp_data") / "wikipedia.jsonl"
     for file in tqdm(Path(wikipedia_dir).glob("*.parquet")):
         df = pd.read_parquet(file)
-        for item in df["text"]:
+        for raw_text in df["text"]:
             sub_sentences = []
-            _sentences = item.split("\n")
+            _sentences = raw_text.split("\n")
             for sent in _sentences:
-                text = blanks_pat.sub(" ", sent).strip()
-                if len(text) > 5 and len(text.split()) > 1:
-                    sub_sentences.append(text)
-            sentences.append({"text": "\n".join(sub_sentences)})
+                _sent = blanks_pat.sub(" ", sent).strip()
+                # Each sentence should have at least 5 characters and 2 words, otherwise filter.
+                if len(_sent) > 5 and len(_sent.split()) > 1:
+                    sub_sentences.append(_sent)
+            text = "\n".join(sub_sentences)
+            if len(text) > 5:
+                sentences.append({"text": text})
+            if len(text) < 10:
+                ic(len(text))
+                ic(raw_text)
         if debug:
             break
     logger.info(f"sentences: {len(sentences)}, starts to write")
@@ -79,8 +85,8 @@ def convert_to_jsonl(debug=False):
             if debug:
                 break
 
+    logger.info("end")
 
-    logger.info('end')
 
 if __name__ == "__main__":
     # check_file(debug=1)  # type: ignore
