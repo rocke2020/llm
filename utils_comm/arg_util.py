@@ -49,9 +49,10 @@ def log_args(args, logger=None, save_dir=None):
             format="%(asctime)s %(filename)s %(lineno)d: %(message)s",
             datefmt="%y-%m-%d %H:%M",
         )
-
+    _args = ['------ arguments ------\n']
     for arg, value in vars(args).items():
-        logger.info(f"{arg}: {value}")
+        _args.append(f"{arg:<40} {value}\n")
+    logger.info(''.join(_args))
 
     if save_dir is not None:
         logger.info("Save args to the dir %s", save_dir)
