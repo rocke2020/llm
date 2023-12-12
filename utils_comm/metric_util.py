@@ -125,11 +125,12 @@ def calc_spearmanr(x, y, notes=""):
     res = stats.spearmanr(x, y)
     logger.info(f"{notes} spearmanr: {res}")
     if hasattr(res, "correlation"):
-        spearman_ratio = float(res.correlation)
-    elif hasattr(res, "statistic"):
-        spearman_ratio = float(res.statistic)
+        spearman_ratio = float(res.correlation) # type: ignore
+    else:
+        assert hasattr(res, "statistic")
+        spearman_ratio = float(res.statistic) # type: ignore
     if hasattr(res, "pvalue"):
-        pvalue = float(res.pvalue)
+        pvalue = float(res.pvalue) # type: ignore
         logger.info(f"{notes} spearmanr pvalue: {pvalue}")
     logger.info(f"{notes} spearman_ratio: {spearman_ratio}")
     return spearman_ratio
