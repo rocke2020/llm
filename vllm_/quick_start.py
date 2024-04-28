@@ -55,11 +55,16 @@ conversations = tokenizer.apply_chat_template(
     tokenize=False,
 )
 ic(conversations)
+conversations_ids = tokenizer.apply_chat_template(
+    messages,
+    tokenize=True,
+)
+ic(conversations_ids)
 outputs = llm.generate(
-    [conversations],
-    SamplingParams(
-        temperature=0.5,
-        top_p=0.9,
+    prompt_token_ids=[conversations_ids],
+    sampling_params=SamplingParams(
+        temperature=0.0,
+        # top_p=0.9,
         max_tokens=1024,
         stop_token_ids=[
             tokenizer.eos_token_id,
