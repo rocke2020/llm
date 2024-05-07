@@ -26,6 +26,7 @@ system_input_general = {"role": "system", "content": SYSTEM_PROMPT_LLAMA2}
 system_input_bio = {"role": "system", "content": SYSTEM_PROMPT_BIO_PEPTIDE}
 user_input_base = {"role": "user", "content": "Who are you?"}
 
+
 context_and_question = (
     "Context information is below.\n---------------------\n"
     "{context}\n--------------------\n"
@@ -34,9 +35,9 @@ context_and_question = (
 )
 
 
-def vllm_generate_with_tokenizer(input_content):
+def vllm_generate_with_tokenizer(input_txt, temperature=0.3):
     tokenizer = get_tokenizer()
-    reply_text = vllm_generate(tokenizer, input_content)
+    reply_text = vllm_generate(tokenizer, input_txt, temperature)
     return reply_text
 
 
@@ -47,11 +48,11 @@ def get_tokenizer(model_name="Llama-3"):
     return tokenizer
 
 
-def vllm_generate(tokenizer, input_txt):
+def vllm_generate(tokenizer, input_txt, temperature=0.0):
     url = base_url + "api/vllm_generate"
     messages = [system_input_bio, {"role": "user", "content": input_txt}]
     input_ids = [tokenizer.apply_chat_template(messages, tokenize=True)]
-    data = {"prompt_token_ids": input_ids}
+    data = {"prompt_token_ids": input_ids, 'temperature': temperature}
     response = requests.post(url, json=data)
     response.raise_for_status()
     response_json = response.json()

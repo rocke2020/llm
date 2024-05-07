@@ -3,7 +3,7 @@ from loguru import logger
 from utils_comm.file_util import get_local_ip
 
 model_paths = {
-    "Llama-3": "/mnt/nas1/models/meta-llama/pretrained_weights/Meta-Llama-3-8B-Instruct",
+    "Llama-3": "/mnt/nas1/models/meta-llama/Meta-Llama-3-8B-Instruct",
     "openchat-3.5": "/mnt/nas1/models/openchat-3.5-0106",
     "Mistral-7B-Instruct-v0.2": "/mnt/nas1/models/mistralai/Mistral-7B-Instruct-v0.2",
 }

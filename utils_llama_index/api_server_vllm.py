@@ -53,7 +53,7 @@ app.add_middleware(
 
 class VllmInputRequest(BaseModel):
     prompt_token_ids: List[List[int]]
-    max_new_tokens: int = 1024
+    max_new_tokens: int = 824
     temperature: float = 0.00
 
 
