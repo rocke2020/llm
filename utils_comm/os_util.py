@@ -1,6 +1,8 @@
 import logging
+import os
 import time
-
+from pathlib import Path
+from typing import Union
 import psutil
 
 logger = logging.getLogger()
@@ -25,7 +27,10 @@ def kill_process_with_all_sub(pid):
 def kill_multi_prcoesss(ids: list[int]):
     """  """
     for pid in ids:
-        kill_process_with_all_sub(pid)
+        try:
+            kill_process_with_all_sub(pid)
+        except Exception as identifier:
+            logger.info('%s', identifier)
 
 
 def check_process_status(pid):
@@ -46,9 +51,14 @@ def check_process_status(pid):
 # limit_memory(1024*1024*120*1024)
 
 
+def check_file_mode(path: Union[str, Path]):
+    mask = oct(os.stat(path).st_mode)[-3:]
+    logger.info(f'file {path} mode {mask}')
+
+
 if __name__ == "__main__":
     ids = [
-        3801547, 
+        76162,
         # 672068,
     ]
     kill_multi_prcoesss(ids)

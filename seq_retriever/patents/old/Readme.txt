@@ -1,0 +1,14 @@
+代码交接文件夹介绍：
+
+envs_package.txt  当前环境(conda下的torch环境)各个包的版本情况
+batch_process_anti_inflammation.ipynb  利用rag批量判断抗炎性氨基酸序列的notebook文件
+batch_process_malassezia.ipynb  利用rag批量判断抗马拉色菌氨基酸序列的notebook文件
+hybrid_retriever_llama2.ipynb   使用基于llama2模型的rag混合检索notebook文件(以马拉色菌为例)
+hybrid_retriever_perplexity.ipynb   使用基于perplexity商用api的rag混合检索notebook文件(以马拉色菌为例)
+batch_process_find_seq.ipynb    目前正在进行的新任务：rag批量识别专利文献中的氨基酸序列任务的notbook文件
+
+batch_process_anti_inflammation.py  利用rag批量判断抗炎性氨基酸序列的python文件,简单调用方式：conda命令进入torch蓄力环境，命令行输入：
+python /home/cymei/nlp_task/work_handover/batch_process_anti_inflammation.py local 或
+python /home/cymei/nlp_task/work_handover/batch_process_anti_inflammation.py api
+
+剩下的数据文件是抗马拉色菌、抗炎症以及序列识别任务对应的部分数据文件

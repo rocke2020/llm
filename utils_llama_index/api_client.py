@@ -9,7 +9,7 @@ from transformers import AutoTokenizer
 sys.path.append(os.path.abspath("."))
 from utils_llama_index.model_comm import get_model_path
 
-base_url = "http://127.0.0.1:8001/"
+BASE_URL = "http://127.0.0.1:8001/"
 SYSTEM_PROMPT_LLAMA2 = """You are an AI assistant that answers questions in a friendly manner, based on the given source documents. Here are some rules you always follow:
 - Generate human readable output, avoid creating output with gibberish text.
 - Generate only the requested output, don't include any other language before or after the requested output.
@@ -23,7 +23,7 @@ SYSTEM_PROMPT_BIO_PEPTIDE = """
 You are a biologist, and your task is to extract and list peptide sequences from provided scientific article contents.
 """
 system_input_general = {"role": "system", "content": SYSTEM_PROMPT_LLAMA2}
-system_input_bio = {"role": "system", "content": SYSTEM_PROMPT_BIO_PEPTIDE}
+system_bio = {"role": "system", "content": SYSTEM_PROMPT_BIO_PEPTIDE}
 user_input_base = {"role": "user", "content": "Who are you?"}
 
 
@@ -35,9 +35,13 @@ context_and_question = (
 )
 
 
-def vllm_generate_with_tokenizer(input_txt, temperature=0.3):
+def vllm_generate_with_tokenizer(
+    input_txt, temperature=0.0, system_input=system_bio, base_url=BASE_URL
+):
     tokenizer = get_tokenizer()
-    reply_text = vllm_generate(tokenizer, input_txt, temperature)
+    reply_text = vllm_generate(
+        tokenizer, input_txt, temperature, system_input, base_url
+    )
     return reply_text
 
 
@@ -48,9 +52,15 @@ def get_tokenizer(model_name="Llama-3"):
     return tokenizer
 
 
-def vllm_generate(tokenizer, input_txt, temperature=0.0):
+def create_user_input_dict(input_txt):
+    return {"role": "user", "content": input_txt}
+
+
+def vllm_generate(
+    tokenizer, input_txt, temperature=0.0, system_input=system_bio, base_url=BASE_URL
+):
     url = base_url + "api/vllm_generate"
-    messages = [system_input_bio, {"role": "user", "content": input_txt}]
+    messages = [system_input, create_user_input_dict(input_txt)]
     input_ids = [tokenizer.apply_chat_template(messages, tokenize=True)]
     data = {"prompt_token_ids": input_ids, 'temperature': temperature}
     response = requests.post(url, json=data)
@@ -60,11 +70,10 @@ def vllm_generate(tokenizer, input_txt, temperature=0.0):
     return reply_text
 
 
-def chat(input_txt, only_return_text=True, debug=False):
+def chat(input_txt, only_return_text=True, debug=False, base_url=BASE_URL):
     url = base_url + "api/chat"
-    user_input = user_input_base.copy()
-    user_input['content'] = input_txt
-    data = {'messages': [system_input_bio, user_input]}
+    user_input = create_user_input_dict(input_txt)
+    data = {"messages": [system_bio, user_input]}
     response = requests.post(url, json=data)
     response.raise_for_status()
     response_json = response.json()
@@ -75,12 +84,13 @@ def chat(input_txt, only_return_text=True, debug=False):
     return response_json
 
 
-def chat_with_context(question, context, only_return_text=True, debug=False):
+def chat_with_context(
+    question, context, only_return_text=True, debug=False, base_url=BASE_URL
+):
     url = base_url + "api/chat"
-    user_input = user_input_base.copy()
     content = context_and_question.format(context=context, question=question)
-    user_input['content'] = content
-    data = {'messages': [system_input_bio, user_input]}
+    user_input = create_user_input_dict(content)
+    data = {"messages": [system_bio, user_input]}
     response = requests.post(url, json=data)
     response.raise_for_status()
     response_json = response.json()
@@ -91,7 +101,7 @@ def chat_with_context(question, context, only_return_text=True, debug=False):
     return response_json
 
 
-def generate_api(input_txt, only_return_text=True):
+def generate_api(input_txt, only_return_text=True, base_url=BASE_URL):
     """ Generate completion from input text using the API.
     
     dict_keys(['text', 'additional_kwargs', 'raw', 'logprobs', 'delta'])
@@ -107,7 +117,7 @@ def generate_api(input_txt, only_return_text=True):
     return response_json
 
 
-def check_health():
+def check_health(base_url=BASE_URL):
     url = base_url + "health"
     response = requests.get(url)
     response.raise_for_status()
@@ -138,6 +148,7 @@ def query_with_retriever(question, context_retriever, only_return_text=True):
 
 
 if __name__ == "__main__":
+    logger.info(f"{BASE_URL = }")
     # check_health()
     input_str = "Hello, how are you today?"
     # query_response = generate_api(input_str)

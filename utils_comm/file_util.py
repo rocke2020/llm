@@ -9,6 +9,7 @@ import dataclasses
 import hashlib
 import json
 import math
+import os
 import socket
 from decimal import Decimal
 from pathlib import Path
@@ -19,10 +20,12 @@ import pandas as pd
 import yaml
 from pandas import DataFrame
 
-from utils_comm.log_util import logger
+from utils_comm.log_util import log_df_basic_info, logger
+
+SEQUENCE = "Sequence"
 
 
-class FileUtil(object):
+class FileUtil:
     """
     文件工具类
     """
@@ -41,10 +44,13 @@ class FileUtil(object):
         return all_raw_text_list
 
     @classmethod
-    def write_lines_to_txt(cls, texts, file_path):
+    def write_lines_to_txt(cls, texts, file_path, skip_existent_file=False):
         """
         写入文本数据，每行均为纯文本, 自动增加换行
         """
+        if Path(file_path).is_file() and skip_existent_file:
+            # logger.info("Skip existent file %s", file_path)
+            return
         with open(file_path, "w", encoding="utf-8") as f:
             for item in texts:
                 f.write(f"{item}\n")
@@ -56,24 +62,9 @@ class FileUtil(object):
         return data
 
     @classmethod
-    def read_jsonl(cls, file_path):
-        data = []
-        with open(file_path, "r", encoding="utf-8") as f:
-            for line in f:
-                data.append(json.loads(line))
-        logger.info(f"Read jsonl file {file_path} with {len(data)} lines")
-        return data
-
-    @classmethod
     def write_json(cls, data, file_path, ensure_ascii=False):
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=ensure_ascii, indent=4, cls=JSONEncoder)
-
-    @classmethod
-    def write_jsonl(cls, data, file_path, ensure_ascii=False):
-        with open(file_path, "w", encoding="utf-8") as f:
-            for line in data:
-                f.write(json.dumps(line, ensure_ascii=ensure_ascii) + "\n")
 
     @classmethod
     def read_yml(cls, file_path):
@@ -83,16 +74,24 @@ class FileUtil(object):
         config = Bunch(**config)
         return config
 
+    def convert_txt_file_to_df(self, txt_file, txt_col_name=SEQUENCE, with_len=True):
+        df = convert_txt_file_to_data_frame(txt_file, txt_col_name)
+        if with_len:
+            df['len'] = df[SEQUENCE].map(len)
+        return df
+
 
 file_util = FileUtil()
 
 
 def read_seqs_from_file(seqs_file, seq_column_name="Sequence", note=""):
-    """input_file must be txt or csv, or xlsx"""
+    """input_file must be fasta, txt, csv or xlsx"""
     seqs_file = Path(seqs_file)
     assert seqs_file.exists(), f"{note} input_file not exists: {seqs_file}"
     if seqs_file.suffix == ".txt":
         seqs = FileUtil.read_lines_from_txt(seqs_file)
+    elif seqs_file.suffix == ".fasta":
+        seqs = get_seqs_from_fasta_file(seqs_file)
     elif seqs_file.suffix == ".csv":
         df = pd.read_csv(seqs_file)
         assert seq_column_name, "seq_column_name is none or empty"
@@ -114,12 +113,72 @@ def read_seqs_from_file(seqs_file, seq_column_name="Sequence", note=""):
     return _seqs
 
 
+def get_seqs_from_fasta_file(file):
+    """Parses a file with FASTA formatted sequences
+
+    Returns:
+        A list of seqs, not including the description,
+    """
+    if not os.path.isfile(file):
+        raise IOError("File not found/readable: {}".format(file))
+
+    sequences = []
+    cur_seq = []
+    with open(file, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith(">"):
+                if cur_seq:
+                    sequences.append("".join(cur_seq))
+                cur_seq = []
+            elif line:
+                cur_seq.append(line)
+    if cur_seq:
+        sequences.append("".join(cur_seq))  # last seq
+
+    return sequences
+
+
 def get_seqs_from_df(df: DataFrame, seq_column_name="Sequence"):
     """ """
     df.dropna(subset=[seq_column_name], inplace=True)
     df.drop_duplicates(subset=[seq_column_name], inplace=True)
     seqs = df[seq_column_name].tolist()
     return seqs
+
+
+def convert_txt_file_to_data_frame(txt_file, txt_col_name=SEQUENCE):
+    """ """
+    seqs = FileUtil.read_lines_from_txt(txt_file)
+    df = DataFrame(seqs, columns=[txt_col_name])
+    return df
+
+
+def read_data(test_file, seq_column_name):
+    """Only reads data, not makes any extra filter, only dropna."""
+    test_file = Path(test_file)
+    if test_file.suffix == ".csv":
+        df = pd.read_csv(test_file)
+    elif test_file.suffix == ".txt":
+        df = convert_txt_file_to_data_frame(test_file)
+    else:
+        assert test_file.suffix == ".pkl"
+        df = pd.read_pickle(test_file)
+    df = df.dropna(subset=seq_column_name, axis=0).reset_index(drop=True)
+    return df
+
+
+def create_seqs_and_df(test_file_or_seqs, seq_column_name):
+    if isinstance(test_file_or_seqs, list):
+        assert isinstance(test_file_or_seqs[0], str)
+        sequences = [seq for seq in test_file_or_seqs if seq]
+        orig_df = DataFrame(sequences, columns=[SEQUENCE])
+    else:
+        orig_df = read_data(test_file_or_seqs, seq_column_name)
+        # sequences must be list[str], not Series, as we subsets it by [start_i, end_i].
+        sequences = orig_df[seq_column_name].tolist()
+    log_df_basic_info(orig_df, full_info=False)
+    return sequences, orig_df
 
 
 def dataclass_from_dict(klass, dikt):
@@ -145,11 +204,19 @@ class JSONEncoder(json.JSONEncoder):
             return o.decode()
         if isinstance(o, numpy.ndarray):
             return o.tolist()
+        if isinstance(o, numpy.floating): # type: ignore
+            return float(o)
+        if isinstance(o, numpy.integer): # type: ignore
+            return int(o)
         return super().default(o)
 
 
-def get_partial_files(input_files, total_parts_num=-1, part_num=-1, start_index=-1):
-    """part_seq starts from 1.
+def get_partial_files_by_index(
+    input_files, total_parts_num=-1, part_num=-1, start_index=-1
+):
+    """
+    args:
+        part_num starts from 1.
 
     If start_index > 0, directly get partial input_files[start_index:]\n
     elseIf part_num > 0 and total_parts_num > 1, split input files\n
@@ -159,7 +226,6 @@ def get_partial_files(input_files, total_parts_num=-1, part_num=-1, start_index=
     if start_index > 0:
         logger.info("Get parts from index %s", start_index)
         partial_files = input_files[start_index:]
-        logger.info(f"Current partial_files num {len(partial_files)}")
     elif total_parts_num > 1 and part_num > 0:
         logger.info(
             "Total_parts num %s, current part_num %s", total_parts_num, part_num
@@ -169,14 +235,26 @@ def get_partial_files(input_files, total_parts_num=-1, part_num=-1, start_index=
         start_i = (part_num - 1) * num_per_part
         end_i = part_num * num_per_part
         partial_files = input_files[start_i:end_i]
-        logger.info(f"Current partial_files num {len(partial_files)}")
     else:
         partial_files = input_files
+    if len(partial_files) == 0:
+        raise RuntimeError(
+            f"No partial input files found in "
+            f"total_parts={total_parts_num}, part_num={part_num}"
+        )
+    logger.info(f"Current partial_files num {len(partial_files)}")
+    logger.info(f"partial first file {partial_files[0]}, end file {partial_files[-1]}")
     return partial_files
 
 
-def sort_partial_files(
-    input_dir, file_suffix, total_parts=2, part_num=1, reverse=False
+def get_sorted_partial_files(
+    input_dir,
+    file_suffix,
+    total_parts=2,
+    part_num=1,
+    reverse=False,
+    as_str=True,
+    only_filename=False,
 ):
     """
     Args:
@@ -189,17 +267,21 @@ def sort_partial_files(
     assert file_suffix.startswith(
         "."
     ), f"file_suffix must starts with ., but got {file_suffix}"
-    input_files = []
-    fasta_files = sorted(Path(input_dir).glob(f"*{file_suffix}"))
-    for file in fasta_files:
-        input_files.append(str(file))
+    sorted_files = sorted(Path(input_dir).glob(f"*{file_suffix}"))
+    assert (
+        len(sorted_files) >= total_parts
+    ), f"total_parts {total_parts} > files num {len(sorted_files)}"
+    if only_filename:
+        sorted_files = [file.name for file in sorted_files]
+    if as_str:
+        input_files = []
+        for file in sorted_files:
+            input_files.append(str(file))
+    else:
+        input_files = sorted_files
     if not input_files:
         raise ValueError(f"No input files found in directory: {input_dir}")
-    partial_files = get_partial_files(input_files, total_parts, part_num)
-    if len(partial_files) == 0:
-        raise RuntimeError(
-            f"No partial input files found for total_parts={total_parts}, part_num={part_num}"
-        )
+    partial_files = get_partial_files_by_index(input_files, total_parts, part_num)
     if reverse:
         partial_files.reverse()
     return partial_files
@@ -284,8 +366,8 @@ class Bunch(dict):
     def __getattr__(self, key):
         try:
             return self[key]
-        except KeyError:
-            raise AttributeError(key)
+        except KeyError as e:
+            raise AttributeError(key) from e
 
     # def __setstate__(self, state):
     #     # Bunch pickles generated with scikit-learn 0.16.* have an non
@@ -300,7 +382,7 @@ class Bunch(dict):
 
 
 def get_sorted_index(lst, reverse=False):
-    """ """
+    """only supports 1d array. Prefer to use numpy.argsort in AI projects."""
     sorted_index = [
         i for i, x in sorted(enumerate(lst), key=lambda x: x[1], reverse=reverse)
     ]
