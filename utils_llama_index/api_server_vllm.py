@@ -3,6 +3,7 @@
 """
 
 import os
+import argparse
 import sys
 from contextlib import asynccontextmanager
 from typing import List
@@ -18,6 +19,9 @@ from vllm import LLM, SamplingParams
 
 from utils_llama_index.model_comm import get_model_path
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--port", default=8001, type=int)
+args = parser.parse_args()
 
 def load_vllm(
     model_name="Llama-3",
@@ -83,4 +87,4 @@ async def vllm_generate(request: VllmInputRequest):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001, workers=1)
+    uvicorn.run(app, host="0.0.0.0", port=args.port, workers=1)

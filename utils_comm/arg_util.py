@@ -14,11 +14,11 @@ class ArgparseUtil(object):
     def __init__(self):
         """comm args"""
         self.parser = argparse.ArgumentParser()
-        self.parser.add_argument("--seed", default=2, type=int)
+        self.parser.add_argument("--seed", type=int, default=2)
 
     def task(self):
         """task args"""
-        self.parser.add_argument("--gpu_id", default=0, type=int, help="the GPU NO.")
+        self.parser.add_argument("--gpu_id", type=int, default=0, help="the GPU NO.")
         self.parser.add_argument("--task", type=str, default="", help="")
         self.parser.add_argument("--input_root_dir", type=str, default="", help="")
         self.parser.add_argument("--out_root_dir", type=str, default="", help="")
@@ -49,10 +49,10 @@ def log_args(args, logger=None, save_dir=None):
             format="%(asctime)s %(filename)s %(lineno)d: %(message)s",
             datefmt="%y-%m-%d %H:%M",
         )
-    _args = ['------ arguments ------\n']
+    _args = ["------ arguments ------\n"]
     for arg, value in vars(args).items():
         _args.append(f"{arg:<40} {value}\n")
-    logger.info(''.join(_args))
+    logger.info("".join(_args))
 
     if save_dir is not None:
         logger.info("Save args to the dir %s", save_dir)

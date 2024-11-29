@@ -27,7 +27,7 @@ def test():
             "content": "You are a pirate chatbot who always responds in pirate speak!",
         },
         {"role": "user", "content": "Who are you?"},
-    ]
+    ]    
     conversations = tokenizer.apply_chat_template(
         messages,
         tokenize=True,
@@ -35,7 +35,7 @@ def test():
     logger.info(conversations)
     outputs = llm.generate(
         prompt_token_ids=[conversations],
-        sampling_params=SamplingParams(
+        sampling_params = SamplingParams(
             temperature=0,
             max_tokens=1024,
             stop_token_ids=[
@@ -45,7 +45,6 @@ def test():
         ),
     )
     logger.info(outputs)
-
 
 if __name__ == "__main__":
     test()

@@ -2,15 +2,17 @@ import numpy as np
 import torch
 import random
 import torch.optim as optim
-from .log_util import logger
+import logging
 from pandas import DataFrame
-from sklearn.model_selection import train_test_split
 
 
-SEQUENCE = 'Sequence'
+logger = logging.getLogger()
+logging.basicConfig(
+    level=logging.INFO, datefmt='%y-%m-%d %H:%M',
+    format='%(asctime)s %(filename)s %(lineno)d: %(message)s')
 
 
-def set_seed(seed: int):
+def set_seed(seed: int = 0):
     """
     Helper function for reproducible behavior to set the seed in `random`, `numpy`, `torch` and/or `tf` (if installed).
 
@@ -23,12 +25,16 @@ def set_seed(seed: int):
     try:
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        torch.use_deterministic_algorithms(True)
     except Exception as identifier:
         pass
 
 
 def get_device(device_id=0):
     """ if device_id < 0: device = "cpu" """
+    gpu_count = 0
     if device_id < 0:
         device = "cpu"
     elif torch.cuda.is_available():
@@ -39,7 +45,7 @@ def get_device(device_id=0):
             device = "cuda:0"
     else:
         device = "cpu"
-    logger.info(f'device: {device}')
+    logger.info(f'gpu_count {gpu_count}, device: {device}')
     return device
 
 
@@ -76,10 +82,10 @@ def models_are_equal(model1, model2):
             logger.info("true")
 
 
-def run_compile_when_pt2(model, enable_complile=True, save_gpu_memory=True):
+def run_compile_when_pt2(model, enable_compile=True, save_gpu_memory=True):
     """  """
     pt_version = torch.__version__.split('.')[0]
-    if pt_version == '2' and enable_complile:
+    if pt_version == '2' and enable_compile:
         if save_gpu_memory:
             _model = torch.compile(model)
         else:
@@ -123,7 +129,10 @@ def log_df_train_test_basic_info(df, df_train, df_test, seq_column=SEQUENCE):
     logger.info(f'df_train seq.head()\n{df_train[seq_column].head()}')
     logger.info(f'df_test seq.head()\n{df_test[seq_column].head()}')
 
-
 def is_bf16_supported():
     """  """
     return torch.cuda.is_bf16_supported()
+
+
+if __name__ == "__main__":
+    get_device()
