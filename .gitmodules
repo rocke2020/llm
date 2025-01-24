@@ -1,3 +1,0 @@
-[submodule "SFT/LLaMA-Factory"]
-	path = SFT/LLaMA-Factory
-	url = git@github.com:rocke2020/LLaMA-Factory.git
